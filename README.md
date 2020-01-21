@@ -1,4 +1,4 @@
-# Get-PG-APP
+# GetMyPGOnline
 Helps you to find PG from nearest location.
 
 ## Users
