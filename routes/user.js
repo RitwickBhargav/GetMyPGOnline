@@ -27,7 +27,7 @@ router.post("/verifyMobile/:contact", verifyContact);
 router.get("/retryVerification/:contact", retryContactVerification);
 router.get("/profile", allAuth, profile);
 router.get("/forgetpassword/:emailormobile", sendForgetEmail);
-router.post("/forgetpassword/:id/:email", forgetPassword);
+router.post("/forgetpassword/:email/:token", forgetPassword);
 router.post("/update", allAuth, imgupload.upload.single("image"), updateUser);
 router.get("/delete/:id/:email", someAuth, deleteUser);
 router.post("/requestremoveban/:email", requestRemoveBan);

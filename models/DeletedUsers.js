@@ -20,14 +20,6 @@ const DeletedUsersSchema = mongoose.Schema({
     type: String,
     required: true
   },
-  resetPwd: {
-    token: {
-      type: String
-    },
-    expiresIn: {
-      type: Date
-    }
-  },
   isEmailVerified: {
     type: Boolean,
     default: false

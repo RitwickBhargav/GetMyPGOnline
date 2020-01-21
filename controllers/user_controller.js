@@ -72,8 +72,12 @@ forgetPasswordEmail = async (req, res) => {
   let email = req;
   let user = await User.findOne({ email });
   if (user) {
+    let token = Date.now() + user._id + Math.random(10000000000);
+    user.resetPwd.token = token;
+    user.resetPwd.expiresIn = Date.now() + 3600000;
+    await user.save();
     const message = `<center style="min-width:580px;width:100%">
-      <div style="margin-bottom:30px;margin-top:20px;text-align:center!important" align="center !important"><img src="cid:unique" width="500" height="50" style="clear:both;display:block;float:none;height:100px;margin:0 auto;max-height:100px;max-width:500px;outline:none;text-decoration:none;width:500px" align="none" class="CToWUd"></div></center><div style="box-sizing:border-box;display:block;margin:0 auto;max-width:580px"><h1 style="color:#586069;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size:16px;font-weight:250!important;line-height:1.25;margin:0 0 30px;padding:0;text-align:left;word-break:normal">Lost Your Password, <strong style="color:#24292e!important">${user.name}</strong>! To change your <strong>Get-My-PG-Online</strong> profile password, we just need to verify that it's you: <strong style="color:#24292e!important">${email}</strong>.<br><br><br><a style="background:#0366d6;border-radius:5px;border:1px solid #0366d6;box-sizing:border-box;color:#ffffff;display:inline-block;font-size:14px;font-weight:bold;margin:0;padding:10px 20px;text-decoration:none" href='https://getmypgonline.herokuapp.com/api/users/forgetpasssword/${user.id}/${email}'>Reset Your Password</a><br><br><br><p style="color:#222222;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size:14px;font-weight:normal;line-height:1.25;margin:0 0 15px;padding:0;text-align:left">Once verified, you can change your password and start using all of Get-My-PG-Online's features to explore, book your PG, and all of this at just one click.</p>
+      <div style="margin-bottom:30px;margin-top:20px;text-align:center!important" align="center !important"><img src="cid:unique" width="500" height="50" style="clear:both;display:block;float:none;height:100px;margin:0 auto;max-height:100px;max-width:500px;outline:none;text-decoration:none;width:500px" align="none" class="CToWUd"></div></center><div style="box-sizing:border-box;display:block;margin:0 auto;max-width:580px"><h1 style="color:#586069;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size:16px;font-weight:250!important;line-height:1.25;margin:0 0 30px;padding:0;text-align:left;word-break:normal">Lost Your Password, <strong style="color:#24292e!important">${user.name}</strong>! To change your <strong>Get-My-PG-Online</strong> profile password, we just need to verify that it's you: <strong style="color:#24292e!important">${email}</strong>.<br><br><br><a style="background:#0366d6;border-radius:5px;border:1px solid #0366d6;box-sizing:border-box;color:#ffffff;display:inline-block;font-size:14px;font-weight:bold;margin:0;padding:10px 20px;text-decoration:none" href='https://getmypgonline.herokuapp.com/api/users/forgetpasssword/${email}/${token}'>Reset Your Password</a><br><br><br><p style="color:#222222;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size:14px;font-weight:normal;line-height:1.25;margin:0 0 15px;padding:0;text-align:left">Once verified, you can change your password and start using all of Get-My-PG-Online's features to explore, book your PG, and all of this at just one click.</p>
       <br>
       <p style="color:#586069!important;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size:14px!important;font-weight:normal;line-height:1.25;margin:0 0 15px;padding:0;text-align:left">Button not working? Paste the following link into your browser: https://getmypgonline.herokuapp.com/api/users/forgetpasssword/${user.id}/${email}</p>
       <br>
@@ -961,78 +965,88 @@ module.exports.sendForgetEmail = async (req, res) => {
 };
 
 module.exports.forgetPassword = async (req, res) => {
-  let { id, email } = req.params;
+  let { email, token } = req.params;
   let { password, confirmPassword } = req.body;
   let user = await User.findOne({ email: email });
   if (user) {
-    if (
-      !user.isEmailVerified &&
-      !user.isContactVerified &&
-      user.otpExpiresIn >= Date.now() &&
-      user.verifyEmail.expiresIn >= Date.now()
-    )
-      res.status(400).json({ message: "Get yourself verified!" });
-    else if (
-      !user.isEmailVerified &&
-      !user.isContactVerified &&
-      user.otpExpiresIn < Date.now() &&
-      user.verifyEmail.expiresIn < Date.now()
-    ) {
-      await sendVerificationLink(user.email);
-      await sendOtp.send(user.contact, "GetMyPGOnline", (err, data) => {
-        user.otpExpiresIn = Date.now() + 600000;
-        user.save();
-        sendOtp.setOtpExpiry("10"); //in minutes
+    if (!user.resetPwd.token != token)
+      return res.json({ success: false, message: "You don't have access!" });
+    else if (user.resetPwd.expiresIn < Date.now()) {
+      forgetPasswordEmail(user.email);
+      return res.json({
+        success: false,
+        message: "Time Expired! New Email is sent!"
       });
-      res.status(400).json({
-        message: "Verify your email Id & Contact No now."
-      });
-    } else if (!user.isEmailVerified) {
-      if (user.verifyEmail.expiresIn >= Date.now())
-        res.status(400).json({
-          message: "Verify your email Id first."
-        });
-      else {
+    } else {
+      if (
+        !user.isEmailVerified &&
+        !user.isContactVerified &&
+        user.otpExpiresIn >= Date.now() &&
+        user.verifyEmail.expiresIn >= Date.now()
+      )
+        res.status(400).json({ message: "Get yourself verified!" });
+      else if (
+        !user.isEmailVerified &&
+        !user.isContactVerified &&
+        user.otpExpiresIn < Date.now() &&
+        user.verifyEmail.expiresIn < Date.now()
+      ) {
         await sendVerificationLink(user.email);
-        res.status(400).json({
-          message: "Verify your email Id first now."
-        });
-      }
-    } else if (!user.isContactVerified) {
-      if (user.otpExpiresIn >= Date.now())
-        res.status(200).json({
-          message: "Verify your Mobile No. first."
-        });
-      else {
         await sendOtp.send(user.contact, "GetMyPGOnline", (err, data) => {
           user.otpExpiresIn = Date.now() + 600000;
           user.save();
           sendOtp.setOtpExpiry("10"); //in minutes
         });
-        res.status(200).json({
-          message: "Verify your Mobile No. first now."
+        res.status(400).json({
+          message: "Verify your email Id & Contact No now."
         });
-      }
-    } else {
-      if (password === confirmPassword) {
-        if (await bcrypt.compare(password, user.password))
-          return res.status(400).json({
-            message:
-              "Password stored with us and your entered passwords are same!"
+      } else if (!user.isEmailVerified) {
+        if (user.verifyEmail.expiresIn >= Date.now())
+          res.status(400).json({
+            message: "Verify your email Id first."
           });
-        const salt = await bcrypt.genSalt(10);
-        password = await bcrypt.hash(password, salt);
-        await User.updateOne(
-          { _id: user.id },
-          { $set: { password: password } }
-        );
-        return res
-          .status(200)
-          .json({ message: "Password Reset Successfully!" });
+        else {
+          await sendVerificationLink(user.email);
+          res.status(400).json({
+            message: "Verify your email Id first now."
+          });
+        }
+      } else if (!user.isContactVerified) {
+        if (user.otpExpiresIn >= Date.now())
+          res.status(200).json({
+            message: "Verify your Mobile No. first."
+          });
+        else {
+          await sendOtp.send(user.contact, "GetMyPGOnline", (err, data) => {
+            user.otpExpiresIn = Date.now() + 600000;
+            user.save();
+            sendOtp.setOtpExpiry("10"); //in minutes
+          });
+          res.status(200).json({
+            message: "Verify your Mobile No. first now."
+          });
+        }
       } else {
-        return res
-          .status(400)
-          .json({ message: "Password and Confirm Password doesn't Match!" });
+        if (password === confirmPassword) {
+          if (await bcrypt.compare(password, user.password))
+            return res.status(400).json({
+              message:
+                "Password stored with us and your entered passwords are same!"
+            });
+          const salt = await bcrypt.genSalt(10);
+          password = await bcrypt.hash(password, salt);
+          await User.updateOne(
+            { _id: user.id },
+            { $set: { password: password } }
+          );
+          return res
+            .status(200)
+            .json({ message: "Password Reset Successfully!" });
+        } else {
+          return res
+            .status(400)
+            .json({ message: "Password and Confirm Password doesn't Match!" });
+        }
       }
     }
   } else {
