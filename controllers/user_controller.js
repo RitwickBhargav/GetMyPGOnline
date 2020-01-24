@@ -116,9 +116,8 @@ module.exports.register = async (req, res) => {
   var name;
   if (lname === "") name = fname;
   else name = fname + " " + lname;
-  if (!name || !email || !contact || !password || !role) {
+  if (!name || !email || !contact || !password || !role)
     return res.status(400).json({ message: "All fields are mandatory!" });
-  }
   let emailRegex = /^\S+@\S+\.\S+/,
     phoneRegex = /^([0|\+[0-9]{1,5})?([7-9][0-9]{9})$/,
     passwordRegex = /^[\S]{8,}/;
