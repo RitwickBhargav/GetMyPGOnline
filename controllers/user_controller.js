@@ -15,7 +15,7 @@ let {
   email5,
   email6,
   email7
-} = require("./assets/messages");
+} = require("./assets/services");
 
 const sendOtp = new SendOtp(process.env.MSG91_API_KEY, messageTemplate);
 
@@ -649,6 +649,7 @@ module.exports.sendForgetEmail = async (req, res) => {
   if (user) {
     if (user.isContactVerified === true && user.isEmailVerified === true) {
       if (!user.resetPwd.token || user.resetPwd.expiresIn < Date.now()) {
+
         forgetPasswordEmail(user.email);
         res.status(200).json({ message: "Forget Password Email Sent!" });
       } else res.status(400).json({ message: "Already Availed!" });
