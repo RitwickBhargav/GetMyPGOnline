@@ -1,15 +1,18 @@
 const nodemailer = require("nodemailer");
 
 let transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.email,
-    pass: process.env.password
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      service: "gmail",
+      auth: {
+        user: process.env.email,
+        pass: process.env.password
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
 
 module.exports.messageTemplate =
   "Your One Time Password is: {{otp}}. This Code is valid only for 10 Minutes. Do not give this code to anyone, even if they say they are from GetMyPGOnline! \n\nIf you didn't request this code, simply ignore this message.\n\nThanks,\nTeam Get My PG Online";
